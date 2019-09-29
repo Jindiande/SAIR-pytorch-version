@@ -8,22 +8,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 from  mlp_minst_model import SAIR
 from dataset import MultiMNIST_Dataset
+import sys
+from os.path import isfile
 
-use_cuda = False
+use_cuda = True
 device = torch.device("cuda" if use_cuda else "cpu") 
 
 def train(epoch, model, train_loader, batch_size, optimizer):
     train_loss = 0
     num_samples = 60000
     for batch_idx, (data, _) in enumerate(train_loader):
-
-        data = data.view(-1, 50, 50)
+        #print("batch_idx",batch_idx)
+        data = data.view(1,-1, 50, 50)
         data = Variable(data).to(device)
         
         #forward + backward + optimize
         optimizer.zero_grad()
         kld_loss, nll_loss = model(data)
         loss = kld_loss + nll_loss
+        if(batch_idx%500==0):
+            print("loss=",loss.item())
         loss.backward()
         optimizer.step()
 
@@ -72,14 +76,24 @@ def fetch_data():
     mnist_train = torch.from_numpy(X_train)
     mnist_test = torch.from_numpy(X_test)
     return mnist_train, y_train, mnist_test, y_test
+def load_checkpoint(filename, model=None):
+    print("loading model...")
+    if(model):
+        #model=torch.load(filename)
+        model.load_state_dict(torch.load(filename))
+    print("loading over")
+
+
+
 
 if __name__== "__main__":
+
     
     #hyperparameters
     n_epochs = 100
     clip = 10
     learning_rate = 1e-3
-    batch_size = 64
+    batch_size = 16
     seed = 128
 
     #manual seed
@@ -96,15 +110,19 @@ if __name__== "__main__":
     
     train_loader = DataLoader(train_dset, batch_size=batch_size, shuffle=True, num_workers=1)
     test_loader = DataLoader(test_dset, batch_size=batch_size, shuffle=True, num_workers=1)
-    
+
+    #load model
+    if isfile(sys.argv[1]):
+        print("test1")
+        load_checkpoint(sys.argv[1],model)
     for epoch in range(1, n_epochs + 1):
 
         #training + testing
         train(epoch, model, train_loader, batch_size, optimizer)
-        test(epoch, model, test_loader, batch_size)
+        #test(epoch, model, test_loader, batch_size)
 
         #saving model
         if epoch % 10 == 1:
             fn = 'data/air_state_dict_'+str(epoch)+'.pth'
-            torch.save(model.state_dict(), fn)
+            torch.save(model, fn)
             print('Saved model to '+fn)
