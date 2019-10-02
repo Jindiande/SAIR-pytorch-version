@@ -118,11 +118,11 @@ class Discovery_time_step(nn.Module):
         n = img.size(0)
         loss=0
         # initial
-        h_dis=torch.zeros(n, 1, 256).cuda().to(device)
-        c_dis = torch.zeros(n, 1, 256).cuda().to(device)
-        z_pres = torch.ones(n, 1, 1).cuda().to(device)
-        z_where = torch.zeros(n, 1, 3).cuda().to(device)
-        z_what = torch.zeros(n, 1, 50).cuda().to(device)
+        h_dis=torch.zeros(n, 1, 256).to(device)
+        c_dis = torch.zeros(n, 1, 256).to(device)
+        z_pres = torch.ones(n, 1, 1).to(device)
+        z_where = torch.zeros(n, 1, 3).to(device)
+        z_what = torch.zeros(n, 1, 50).to(device)
 
         e_t=self.encoder_img(img.view(img.size(0),50*50).to(device))#[B 100]
         for i in range(self.max_step):
@@ -217,13 +217,13 @@ class Propgate_time_step(nn.Module):#each time step propagate model
       numbers=z_what_last_time.size(1)
 
       #initilise
-      h_rela = torch.zeros(n, 1, 256).cuda().to(device)
-      c_rela = torch.zeros(n, 1, 256).cuda().to(device)
-      h_temp = torch.zeros(n, 1, 256).cuda().to(device)
-      c_temp = torch.zeros(n, 1, 256).cuda().to(device)
-      z_pres = torch.ones(n, 1,1).cuda().to(device)
-      z_where = torch.zeros(n, 1,3).cuda().to(device)
-      z_what = torch.zeros(n, 1,50).cuda().to(device)
+      h_rela = torch.zeros(n, 1, 256).to(device)
+      c_rela = torch.zeros(n, 1, 256).to(device)
+      h_temp = torch.zeros(n, 1, 256).to(device)
+      c_temp = torch.zeros(n, 1, 256).to(device)
+      z_pres = torch.ones(n, 1,1).to(device)
+      z_where = torch.zeros(n, 1,3).to(device)
+      z_what = torch.zeros(n, 1,50).to(device)
       #
 
       for i in range(numbers):
@@ -279,15 +279,3 @@ class Propgate_time_step(nn.Module):#each time step propagate model
               torch.cat((z_what, z_what_item.unsqueeze(1)), dim=1)
       #print("z_pres_prop_shape",z_pres.size())
       return  z_what,z_where,z_pres,h_temp#[B number __length]
-
-
-
-
-
-
-
-
-
-
-
-
