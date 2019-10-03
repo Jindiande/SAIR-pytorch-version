@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
         # saving model
         if epoch % 10 == 1:
-            fn = 'data/air_state_dict_' + str(epoch) + '.pth'
+            fn = '/content/drive/My Drive/data/air_state_dict_' + str(epoch) + '.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to ' + fn)
 
