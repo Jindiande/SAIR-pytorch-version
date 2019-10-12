@@ -94,7 +94,7 @@ if __name__ == "__main__":
     # hyperparameters
     n_epochs = 100
     clip = 10
-    learning_rate = 1e-4
+    learning_rate = 1e-5
     batch_size = 64
     seed = 128
 
@@ -103,7 +103,6 @@ if __name__ == "__main__":
     plt.ion()
 
     model = SAIR()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     mnist_train, y_train, mnist_test, y_test = fetch_data()
 
@@ -120,14 +119,15 @@ if __name__ == "__main__":
     for epoch in range(1, n_epochs + 1):
 
         # training + testing
-
+        #learning_rate=(0.9**(epoch%10))*learning_rate
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         train(epoch, model, train_loader, batch_size, optimizer)
 
         # test(epoch, model, test_loader, batch_size)
 
         # saving model
         if epoch % 10 == 0:
-            fn = '/content/drive/My Drive/SAIR-pytorch-version1/data/air_state_dict_' + str(epoch) + '.pth'
+            fn = 'D:/Python/SAIR_pytorch/data/air_state_dict_' + str(epoch) + '.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to ' + fn)
 
