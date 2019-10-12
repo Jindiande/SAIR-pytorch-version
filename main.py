@@ -10,6 +10,8 @@ from mlp_minst_model import SAIR
 from dataset import MultiMNIST_Dataset
 import sys
 from os.path import isfile
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 use_cuda = True
 device = torch.device("cuda" if use_cuda else "cpu")
@@ -21,14 +23,15 @@ def train(epoch, model, train_loader, batch_size, optimizer):
     for batch_idx, (data, _) in enumerate(train_loader):
         # print("batch_idx",batch_idx)
         data = data.view(1, -1, 50, 50)
-        data = Variable(data).to(device)
+        if(use_cuda):
+            data = Variable(data).cuda()
 
         # forward + backward + optimize
         optimizer.zero_grad()
         kld_loss, nll_loss = model(data)
         loss = kld_loss + nll_loss
         if (batch_idx % 500 == 0):
-            print("loss=", loss.item())
+            print("loss=", loss.item()/batch_size)
         loss.backward()
         optimizer.step()
 
@@ -91,8 +94,8 @@ if __name__ == "__main__":
     # hyperparameters
     n_epochs = 100
     clip = 10
-    learning_rate = 1e-3
-    batch_size = 16
+    learning_rate = 1e-4
+    batch_size = 64
     seed = 128
 
     # manual seed
@@ -117,15 +120,14 @@ if __name__ == "__main__":
     for epoch in range(1, n_epochs + 1):
 
         # training + testing
-        try:
-            train(epoch, model, train_loader, batch_size, optimizer)
-        except RuntimeError as e:
-            print("some error")
+
+        train(epoch, model, train_loader, batch_size, optimizer)
+
         # test(epoch, model, test_loader, batch_size)
 
         # saving model
-        if epoch % 10 == 1:
-            fn = '/content/drive/data/air_state_dict_' + str(epoch) + '.pth'
+        if epoch % 10 == 0:
+            fn = '/content/drive/My Drive/SAIR-pytorch-version1/data/air_state_dict_' + str(epoch) + '.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to ' + fn)
 

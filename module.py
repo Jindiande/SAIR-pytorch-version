@@ -138,9 +138,13 @@ def expand_z_where(z_where):
     #             [0,s,y]]
     b = z_where.size(0)
     #n=z_where.size(1)
-    expansion_indices = torch.LongTensor([1, 0, 2, 0, 1, 3]).cuda()
+    expansion_indices = torch.LongTensor([1, 0, 2, 0, 1, 3])
+    element=torch.zeros([1, 1]).expand(b, 1)
+    if(use_cuda):
+        expansion_indices = expansion_indices.cuda()
     #print("z_where.shape_expand",z_where.size())
-    out = torch.cat((torch.zeros([1, 1]).expand(b, 1).cuda(), z_where), 1)#[B L+1]
+
+    out = torch.cat((element.cuda(), z_where), 1)#[B L+1]
     return torch.index_select(out, 1, expansion_indices).view(b,2, 3)
 """
 def expand_z_where_decode(z_where):
@@ -203,7 +207,9 @@ def attentive_stn_encode(z_where, image):
     b=z_where.size(0)
     theta_inv = expand_z_where(z_where_inv(z_where))
     grid = affine_grid(theta_inv.view(b,2,3), torch.Size((b, 1, 20, 20)))#[b 20 20 2]
-    out = grid_sample(image.view(b, 1, 50, 50), grid.cuda())#[b 1 20 20]
+    if(use_cuda):
+        grid=grid.cuda()
+    out = grid_sample(image.view(b, 1, 50, 50), grid)#[b 1 20 20]
     return out.view(b, -1)#[b 400]
 
 
@@ -291,3 +297,6 @@ def dis_hidden_state(rnn,data,z_where_pres_object,z_what_pres_object,h_prev, c_p
     h, c = rnn(rnn_input, (h_prev.squeeze(1), c_prev.squeeze(1)))
     return h.unsqueeze(1), c.unsqueeze(1)  # [B 1 256]
 
+def zeros(*args):
+    x = torch.zeros(*args)
+    return x.cuda() if use_cuda else x

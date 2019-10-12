@@ -14,7 +14,7 @@ what_length=50
 hidden_size=256
 max_number=3 # max latent variable number per fram
 use_cuda = True
-device = torch.device("cuda" if use_cuda else "cpu")
+#device = torch.device("cuda" if use_cuda else "cpu")
 #hidden_state_size=256
 MAX_STEP_DISCOVERY=3 # discovery max step
 Batch_size=32
@@ -38,11 +38,13 @@ class SAIR(nn.Module):# whole SAIR model
         nll_loss = 0
 
         # ini
-        z_what=torch.ones(B, 1,what_length).to(device)
-        z_where=torch.ones(B, 1,where_length).to(device)
-        z_pres=torch.ones(B, 1,pres_length).to(device)
-        hidden=torch.ones(B, 1,hidden_size).to(device)
-        y=torch.zeros(B,image.size(2),image.size(3)).to(device)#[B H W]
+        if(use_cuda):
+            z_what = torch.ones(B, 1, what_length).cuda()
+            z_where = torch.ones(B, 1, where_length).cuda()
+            z_pres = torch.ones(B, 1, pres_length).cuda()
+            hidden = torch.ones(B, 1, hidden_size).cuda()
+            y = torch.zeros(B, image.size(2), image.size(3)).cuda()  # [B H W]
+
         for t in range(T):
             #print("t=",t)
             z_propagte_what, z_propagte_where, z_propagte_pres, h_temp_prop=self.propgate(image[t,:,:,:],z_what,z_where,z_pres,hidden)
@@ -91,7 +93,8 @@ class Discovery_time_step(nn.Module):
     def _reparameterized_sample_where_and_pres(self,z_where_mu, z_where_sd,z_pres_proba,z_pres_prev):
         z_pres=Independent( Bernoulli(z_pres_proba * z_pres_prev), 1 ).sample()
         eps = torch.FloatTensor(z_where_sd.size()).normal_()
-        eps = Variable(eps).to(device)
+        if(use_cuda):
+           eps = Variable(eps).cuda()
         return eps.mul(z_where_sd).add_(z_where_mu),z_pres  #[B where_length],[B pres_length]
     def latent_loss(self, z_mean, z_sig):
         mean_sq = z_mean * z_mean
@@ -101,7 +104,8 @@ class Discovery_time_step(nn.Module):
         #mean, std = self.latent_predic_what(input)
         if self.training:
             eps = torch.FloatTensor(std.size()).normal_()
-            eps = Variable(eps).to(device)
+            if (use_cuda):
+                eps = Variable(eps).cuda()
             return eps.mul(std).add_(mean)
         else:
             return mean
@@ -118,13 +122,23 @@ class Discovery_time_step(nn.Module):
         n = img.size(0)
         loss=0
         # initial
+        """
         h_dis=torch.zeros(n, 1, 256).to(device)
         c_dis = torch.zeros(n, 1, 256).to(device)
         z_pres = torch.ones(n, 1, 1).to(device)
         z_where = torch.zeros(n, 1, 3).to(device)
         z_what = torch.zeros(n, 1, 50).to(device)
+        """
+        h_dis = zeros(n, 1, 256)
+        c_dis = zeros(n, 1, 256)
+        z_pres = zeros(n, 1, 1)
+        z_where = zeros(n, 1, 3)
+        z_what = zeros(n, 1, 50)
 
-        e_t=self.encoder_img(img.view(img.size(0),50*50).to(device))#[B 100]
+        if(use_cuda):
+            e_t=self.encoder_img(img.view(img.size(0),50*50).cuda())#[B 100]
+        else:
+            e_t = self.encoder_img(img.view(img.size(0), 50 * 50))  # [B 100]
         for i in range(self.max_step):
             if(i==0):
                 z_where_item=z_propagte_where[:,-1,:]
@@ -179,7 +193,8 @@ class Propgate_time_step(nn.Module):#each time step propagate model
         mean, std = self.latent_predic_where(input,where_length)#[B 3]
         if self.training:
             eps = torch.FloatTensor(std.size()).normal_()
-            eps = Variable(eps).to(device)
+            if(use_cuda):
+               eps = Variable(eps).cuda()
             return eps.mul(std).add_(mean)
         else:
             return mean
@@ -201,7 +216,8 @@ class Propgate_time_step(nn.Module):#each time step propagate model
         mean, std = self.latent_predic_what(input,what_length)#[B 50]
         if self.training:
             eps = torch.FloatTensor(std.size()).normal_()
-            eps = Variable(eps).to(device)
+            if (use_cuda):
+                eps = Variable(eps).cuda()
             return eps.mul(std).add_(mean)
         else:
             return mean
@@ -217,19 +233,19 @@ class Propgate_time_step(nn.Module):#each time step propagate model
       numbers=z_what_last_time.size(1)
 
       #initilise
-      h_rela = torch.zeros(n, 1, 256).to(device)
-      c_rela = torch.zeros(n, 1, 256).to(device)
-      h_temp = torch.zeros(n, 1, 256).to(device)
-      c_temp = torch.zeros(n, 1, 256).to(device)
-      z_pres = torch.ones(n, 1,1).to(device)
-      z_where = torch.zeros(n, 1,3).to(device)
-      z_what = torch.zeros(n, 1,50).to(device)
+      h_rela = zeros(n, 1, 256)
+      c_rela = zeros(n, 1, 256)
+      h_temp = zeros(n, 1, 256)
+      c_temp = zeros(n, 1, 256)
+      z_pres = zeros(n, 1, 1)
+      z_where = zeros(n, 1,3)
+      z_what = zeros(n, 1,50)
       #
 
       for i in range(numbers):
           z_where_bias = self.prop_loca(z_where_last_time[:, i, :], hidden_last_time_temp[:, i, :])  # [B 3]
-          x_att_bias = attentive_stn_encode(z_where_bias.to(device), img.to(device))  # Spatial trasform [B 400]
-          encode_bias = self.glimpse_encoder(x_att_bias.to(device))  # [B 100]
+          x_att_bias = attentive_stn_encode(z_where_bias, img)  # Spatial trasform [B 400]
+          encode_bias = self.glimpse_encoder(x_att_bias)  # [B 100]
           if (i != 0):
               h_rela_item, c_rela_item = relation_hidden_state(self.relation_rnn, encode_bias, z_where_last_time[:, i, :],
                                                                z_where[:, i - 1, :]
@@ -246,19 +262,19 @@ class Propgate_time_step(nn.Module):#each time step propagate model
                                                      hidden_last_time_temp[:, i, :],
                                                      h_rela[:, i, :], c_rela[:, i, :])  # [B 1 256]
 
-          z_where_cal=torch.cat((z_where_last_time[:,i,:],h_rela[:,i,:]),1).to(device)#[B 3+256]
-          z_where_item=self._reparameterized_sample_where(z_where_cal).to(device)#[B 3]
+          z_where_cal=torch.cat((z_where_last_time[:,i,:],h_rela[:,i,:]),1)#[B 3+256]
+          z_where_item=self._reparameterized_sample_where(z_where_cal)#[B 3]
           #print("z_where_item",z_where_item.size())
-          x_att=attentive_stn_encode(z_where_item, img.to(device)).to(device) # Spatial trasform [B 400]
-          encode=self.glimpse_encoder(x_att.to(device))  # [B 100]
+          x_att=attentive_stn_encode(z_where_item, img) # Spatial trasform [B 400]
+          encode=self.glimpse_encoder(x_att)  # [B 100]
 
           h_temp_item, c_temp_item = temp_hidden_state(self.tem_rnn, encode,
                                                            z_where[:, i - 1, :],
                                                            hidden_last_time_temp[:, i, :],
                                                            h_rela[:, i , :], c_rela[:, i , :])  # [B 1 256]
           if(i!=0):
-               torch.cat((h_temp, h_temp_item.to(device)), dim=1)
-               torch.cat((c_temp, c_temp_item.to(device)), dim=1)
+               torch.cat((h_temp, h_temp_item), dim=1)
+               torch.cat((c_temp, c_temp_item), dim=1)
           else:
               h_temp=h_temp_item.to(device)
               c_temp=c_temp_item.to(device)
