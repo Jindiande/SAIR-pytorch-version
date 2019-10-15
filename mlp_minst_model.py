@@ -47,8 +47,8 @@ class SAIR(nn.Module):# whole SAIR model
 
         for t in range(T):
             #print("t=",t)
-            z_propagte_what, z_propagte_where, z_propagte_pres, h_temp_prop=self.propgate(image[t,:,:,:],z_what,z_where,z_pres,hidden)
-            z_what, z_where, z_pres, loss1=self.discovery(image[t,:,:,:], z_propagte_what, z_propagte_where, z_propagte_pres,self.propgate.glimpse_encoder)
+            z_propagte_what, z_propagte_where, z_propagte_pres, hidden=self.propgate(image[t,:,:,:],z_what,z_where,z_pres,hidden)
+            z_what, z_where, z_pres, loss1,hidden=self.discovery(image[t,:,:,:], z_propagte_what, z_propagte_where, z_propagte_pres,self.propgate.glimpse_encoder)
             kld_loss+=loss1
             y=self.decode(y,z_what,z_where,z_pres)#[B H W]
             loss2=nn.functional.binary_cross_entropy(y, image[t,:,:,:], size_average=False)
@@ -134,6 +134,7 @@ class Discovery_time_step(nn.Module):
         z_pres = zeros(n, 1, 1)
         z_where = zeros(n, 1, 3)
         z_what = zeros(n, 1, 50)
+        h_dis_item= zeros(n, 1, 256)
 
         if(use_cuda):
             e_t=self.encoder_img(img.view(img.size(0),50*50).cuda())#[B 100]
@@ -148,8 +149,8 @@ class Discovery_time_step(nn.Module):
                 z_where_item=z_where[:,i-1,:]
                 z_what_item = z_what[:, i - 1, :]
                 z_pres_item = z_pres[:, i - 1, :]
-            h_dis,c_dis=dis_hidden_state(self.dis_rnncell,e_t,z_where_item,z_what_item,h_dis,c_dis)#[B 1 hidden_size]
-            z_pres_proba,z_where_mu, z_where_sd=self.latent_predic_where_and_pres(h_dis.squeeze(1))
+            h_dis_item,c_dis=dis_hidden_state(self.dis_rnncell,e_t,z_where_item,z_what_item,h_dis_item,c_dis)#[B 1 hidden_size]
+            z_pres_proba,z_where_mu, z_where_sd=self.latent_predic_where_and_pres(h_dis_item.squeeze(1))
             #print("z_pres_proba_discovery", z_pres_proba.size())
             loss+=self.latent_loss(z_where_mu, z_where_sd)
             #print("z_pres_item_discovery",z_pres_item.size())
@@ -163,11 +164,13 @@ class Discovery_time_step(nn.Module):
                 z_what=z_what_item.unsqueeze(1)
                 z_where=z_where_item.unsqueeze(1)
                 z_pres=z_pres_item.unsqueeze(1)
+                h_dis=h_dis_item
             else:
                 z_what=torch.cat((z_what,z_what_item.unsqueeze(1)),dim=1)
                 z_where = torch.cat((z_where, z_where_item.unsqueeze(1)), dim=1)
                 z_pres = torch.cat((z_pres, z_pres_item.unsqueeze(1)), dim=1)
-        return  z_what,z_where,z_pres,loss
+                h_dis=torch.cat(( h_dis,h_dis_item), dim=1)
+        return  z_what,z_where,z_pres,loss,h_dis
 
 
 class Propgate_time_step(nn.Module):#each time step propagate model
@@ -231,6 +234,7 @@ class Propgate_time_step(nn.Module):#each time step propagate model
       # hidden_last_time_temp [B numbers hidden_size]
       n=img.size(0)
       numbers=z_what_last_time.size(1)
+      print("hidden_last_time_temp.size",hidden_last_time_temp.size())
 
       #initilise
       h_rela = zeros(n, 1, 256)
@@ -241,8 +245,9 @@ class Propgate_time_step(nn.Module):#each time step propagate model
       z_where = zeros(n, 1,3)
       z_what = zeros(n, 1,50)
       #
-
+      print("numbers",numbers)
       for i in range(numbers):
+          print("i=",i)
           z_where_bias = self.prop_loca(z_where_last_time[:, i, :], hidden_last_time_temp[:, i, :])  # [B 3]
           x_att_bias = attentive_stn_encode(z_where_bias, img)  # Spatial trasform [B 400]
           encode_bias = self.glimpse_encoder(x_att_bias)  # [B 100]
@@ -252,8 +257,8 @@ class Propgate_time_step(nn.Module):#each time step propagate model
                                                                , z_what_last_time[:, i, :], z_what[:, i - 1, :],
                                                                hidden_last_time_temp[:, i, :],
                                                                h_rela[:, i - 1, :], c_rela[:, i - 1, :])  # [B 1 256]
-              torch.cat((h_rela, h_rela_item), dim=1)
-              torch.cat((c_rela, c_rela_item), dim=1)
+              h_rela=torch.cat((h_rela, h_rela_item), dim=1)
+              c_rela=torch.cat((c_rela, c_rela_item), dim=1)
           elif (i == 0):
               #print("test2")
               h_rela, c_rela = relation_hidden_state(self.relation_rnn, encode_bias, z_where_last_time[:, i, :],
@@ -261,7 +266,7 @@ class Propgate_time_step(nn.Module):#each time step propagate model
                                                      , z_what_last_time[:, i, :], z_what[:, i, :],
                                                      hidden_last_time_temp[:, i, :],
                                                      h_rela[:, i, :], c_rela[:, i, :])  # [B 1 256]
-
+          print("h_rela",h_rela.size())
           z_where_cal=torch.cat((z_where_last_time[:,i,:],h_rela[:,i,:]),1)#[B 3+256]
           z_where_item=self._reparameterized_sample_where(z_where_cal)#[B 3]
           #print("z_where_item",z_where_item.size())
@@ -273,8 +278,8 @@ class Propgate_time_step(nn.Module):#each time step propagate model
                                                            hidden_last_time_temp[:, i, :],
                                                            h_rela[:, i , :], c_rela[:, i , :])  # [B 1 256]
           if(i!=0):
-               torch.cat((h_temp, h_temp_item), dim=1)
-               torch.cat((c_temp, c_temp_item), dim=1)
+              h_temp=torch.cat((h_temp, h_temp_item), dim=1)
+              c_temp=torch.cat((c_temp, c_temp_item), dim=1)
           else:
               h_temp=h_temp_item.to(device)
               c_temp=c_temp_item.to(device)
@@ -290,8 +295,9 @@ class Propgate_time_step(nn.Module):#each time step propagate model
               z_what=z_what_item.unsqueeze(1)
               z_where=z_where_item.unsqueeze(1)
           else:
-              torch.cat((z_pres,z_pres_item.unsqueeze(1)),dim=1)
-              torch.cat((z_where, z_where_item.unsqueeze(1)), dim=1)
-              torch.cat((z_what, z_what_item.unsqueeze(1)), dim=1)
+              z_pres=torch.cat((z_pres,z_pres_item.unsqueeze(1)),dim=1)
+              z_where=torch.cat((z_where, z_where_item.unsqueeze(1)), dim=1)
+              z_what=torch.cat((z_what, z_what_item.unsqueeze(1)), dim=1)
       #print("z_pres_prop_shape",z_pres.size())
+      print("h_temp")
       return  z_what,z_where,z_pres,h_temp#[B number __length]

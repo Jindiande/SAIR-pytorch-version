@@ -2,6 +2,8 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from torch.utils.data import Dataset
 import numpy as np
 import torch
+import pickle
+from numpy.core import multiarray
 
 class MultiMNIST_Dataset(Dataset):
 
@@ -24,3 +26,11 @@ class MultiMNIST_Dataset(Dataset):
     def __len__(self):
         return len(self.X)
         
+
+
+def timestep_Multiminst(address1,address2):
+    file1 = open("D:\Python\SAIR_tensorflow\data\MNIST_data\seq_mnist_train.pickle", "rb")
+    file2 = open("D:\Python\SAIR_tensorflow\data\MNIST_data\seq_mnist_validation.pickle", "rb")
+    train = pickle.load(file1,encoding='latin1')
+    test=pickle.load(file2,encoding='latin1')
+    return np.array((train['imgs'])),np.array((test['imgs'])) #[10 60000 50 50],[10 10000 50 50]
