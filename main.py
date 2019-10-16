@@ -75,7 +75,7 @@ def train2(epoch, model, train_data, batch_size, optimizer):
         optimizer.zero_grad()
         kld_loss, nll_loss = model(data)
         loss = kld_loss + nll_loss
-        if (batch_idx % 5 == 0):
+        if (batch_idx % 500 == 0):
             print("batch_idx=",batch_idx,"loss=", loss.item()/batch_size)
         loss.backward()
         optimizer.step()
