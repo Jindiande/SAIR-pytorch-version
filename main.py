@@ -182,8 +182,8 @@ if __name__ == "__main__":
         # test(epoch, model, test_loader, batch_size)
 
         # saving model
-        if epoch % 1 == 0:
-            fn = 'D:/Python/SAIR_pytorch/data/air_state_dict_' + str(epoch) + '.pth'
+        if epoch % 10 == 0:
+            fn = '/content/drive/My Drive/SAIR-pytorch-version1/data/air_state_dict_' + str(epoch) + '.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to ' + fn)
 
