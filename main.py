@@ -15,8 +15,8 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 use_cuda = True
 device = torch.device("cuda" if use_cuda else "cpu")
-train_data_address="D:\Python\SAIR_tensorflow\data\MNIST_data\seq_mnist_train.pickle"
-test_data_address="D:\Python\SAIR_tensorflow\data\MNIST_data\seq_mnist_validation.pickle"
+train_data_address=sys.argv[2]
+test_data_address=sys.argv[3]
 
 
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     # hyperparameters
     n_epochs = 100
     clip = 10
-    learning_rate = 1e-5
+    learning_rate = 1e-3
     batch_size = 64
     seed = 128
 

@@ -29,8 +29,8 @@ class MultiMNIST_Dataset(Dataset):
 
 
 def timestep_Multiminst(address1,address2):
-    file1 = open("D:\Python\SAIR_tensorflow\data\MNIST_data\seq_mnist_train.pickle", "rb")
-    file2 = open("D:\Python\SAIR_tensorflow\data\MNIST_data\seq_mnist_validation.pickle", "rb")
+    file1 = open(address1, "rb")
+    file2 = open(address2, "rb")
     train = pickle.load(file1,encoding='latin1')
     test=pickle.load(file2,encoding='latin1')
     return np.array((train['imgs'])),np.array((test['imgs'])) #[10 60000 50 50],[10 10000 50 50]
