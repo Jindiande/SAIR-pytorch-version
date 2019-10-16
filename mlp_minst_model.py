@@ -17,7 +17,7 @@ use_cuda = True
 #device = torch.device("cuda" if use_cuda else "cpu")
 #hidden_state_size=256
 MAX_STEP_DISCOVERY=3 # discovery max step
-Batch_size=32
+
 
 class SAIR(nn.Module):# whole SAIR model
     def __init__(self):
@@ -281,8 +281,8 @@ class Propgate_time_step(nn.Module):#each time step propagate model
               h_temp=torch.cat((h_temp, h_temp_item), dim=1)
               c_temp=torch.cat((c_temp, c_temp_item), dim=1)
           else:
-              h_temp=h_temp_item.to(device)
-              c_temp=c_temp_item.to(device)
+              h_temp=h_temp_item
+              c_temp=c_temp_item
 
           z_what_cal=torch.cat((z_what_last_time[:,i,:],h_rela[:,i,:],h_temp_item.squeeze(1)),1)#[B 50+256+256]
           z_what_item=self._reparameterized_sample_what(z_what_cal)#[B 50]
