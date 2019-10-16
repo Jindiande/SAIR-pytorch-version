@@ -35,7 +35,7 @@ def train(epoch, model, train_loader, batch_size, optimizer):
         kld_loss, nll_loss = model(data)
         loss = kld_loss + nll_loss
         if (batch_idx % 500 == 0):
-            print("loss=", loss.item()/batch_size)
+            print("batch_idx=",batch_idx,"loss=", loss.item()/batch_size)
         loss.backward()
         optimizer.step()
 
@@ -75,8 +75,8 @@ def train2(epoch, model, train_data, batch_size, optimizer):
         optimizer.zero_grad()
         kld_loss, nll_loss = model(data)
         loss = kld_loss + nll_loss
-        if (batch_idx % 500 == 0):
-            print("loss=", loss.item() / batch_size)
+        if (batch_idx % 5 == 0):
+            print("batch_idx=",batch_idx,"loss=", loss.item()/batch_size)
         loss.backward()
         optimizer.step()
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     # hyperparameters
     n_epochs = 100
     clip = 10
-    learning_rate = 1e-3
+    learning_rate = 1e-5
     batch_size = 64
     seed = 128
 
@@ -182,7 +182,7 @@ if __name__ == "__main__":
         # test(epoch, model, test_loader, batch_size)
 
         # saving model
-        if epoch % 10 == 0:
+        if epoch % 1 == 0:
             fn = 'D:/Python/SAIR_pytorch/data/air_state_dict_' + str(epoch) + '.pth'
             torch.save(model.state_dict(), fn)
             print('Saved model to ' + fn)

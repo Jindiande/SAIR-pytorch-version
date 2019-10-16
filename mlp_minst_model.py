@@ -12,7 +12,7 @@ where_length=3
 pres_length=1
 what_length=50
 hidden_size=256
-max_number=3 # max latent variable number per fram
+max_number=1 # max latent variable number per fram
 use_cuda = True
 #device = torch.device("cuda" if use_cuda else "cpu")
 #hidden_state_size=256
@@ -53,7 +53,7 @@ class SAIR(nn.Module):# whole SAIR model
             y=self.decode(y,z_what,z_where,z_pres)#[B H W]
             loss2=nn.functional.binary_cross_entropy(y, image[t,:,:,:], size_average=False)
             nll_loss+=loss2
-        return  kld_loss, nll_loss
+        return  kld_loss/T, nll_loss/T
 
 
 class decode_time_step(nn.Module):
@@ -234,7 +234,7 @@ class Propgate_time_step(nn.Module):#each time step propagate model
       # hidden_last_time_temp [B numbers hidden_size]
       n=img.size(0)
       numbers=z_what_last_time.size(1)
-      print("hidden_last_time_temp.size",hidden_last_time_temp.size())
+      #print("hidden_last_time_temp.size",hidden_last_time_temp.size())
 
       #initilise
       h_rela = zeros(n, 1, 256)
@@ -245,9 +245,9 @@ class Propgate_time_step(nn.Module):#each time step propagate model
       z_where = zeros(n, 1,3)
       z_what = zeros(n, 1,50)
       #
-      print("numbers",numbers)
+      #print("numbers",numbers)
       for i in range(numbers):
-          print("i=",i)
+          #print("i=",i)
           z_where_bias = self.prop_loca(z_where_last_time[:, i, :], hidden_last_time_temp[:, i, :])  # [B 3]
           x_att_bias = attentive_stn_encode(z_where_bias, img)  # Spatial trasform [B 400]
           encode_bias = self.glimpse_encoder(x_att_bias)  # [B 100]
@@ -266,7 +266,7 @@ class Propgate_time_step(nn.Module):#each time step propagate model
                                                      , z_what_last_time[:, i, :], z_what[:, i, :],
                                                      hidden_last_time_temp[:, i, :],
                                                      h_rela[:, i, :], c_rela[:, i, :])  # [B 1 256]
-          print("h_rela",h_rela.size())
+          #print("h_rela",h_rela.size())
           z_where_cal=torch.cat((z_where_last_time[:,i,:],h_rela[:,i,:]),1)#[B 3+256]
           z_where_item=self._reparameterized_sample_where(z_where_cal)#[B 3]
           #print("z_where_item",z_where_item.size())
@@ -299,5 +299,5 @@ class Propgate_time_step(nn.Module):#each time step propagate model
               z_where=torch.cat((z_where, z_where_item.unsqueeze(1)), dim=1)
               z_what=torch.cat((z_what, z_what_item.unsqueeze(1)), dim=1)
       #print("z_pres_prop_shape",z_pres.size())
-      print("h_temp")
+      #print("h_temp")
       return  z_what,z_where,z_pres,h_temp#[B number __length]
