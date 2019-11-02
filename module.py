@@ -16,13 +16,16 @@ class ObjectEncoder(nn.Module):
         self.enc = nn.Sequential(nn.Linear(50*50, 400),
                                  nn.ReLU(),
                                  nn.Linear(400, 100))
+        """
         if(use_cuda):
            self=self.cuda()
+        """
+        self = self.to(device)
 
     def forward(self, data):
-        output = self.enc(data.view(data.size(0),50*50).cuda())
+        output = self.enc(data.view(data.size(0),50*50))
 
-        return output#[B 100]
+        return output.to(device)#[B 100]
 
 
 class GlimpseEncoder(nn.Module):
@@ -31,10 +34,13 @@ class GlimpseEncoder(nn.Module):
         self.enc = nn.Sequential(nn.Linear(400, 200),
                                  nn.ReLU(),
                                  nn.Linear(200, 100))
+        """
         if(use_cuda):
            self=self.cuda()
+        """
+        self = self.to(device)
     def forward(self, data):
-        output=self.enc(data.to(device))
+        output=self.enc(data)
         return output #[B 100]
 
 
@@ -51,11 +57,14 @@ class ObjectDecoder(nn.Module):
                                  nn.ReLU(),
                                  nn.Linear(200, 400),
                                  nn.Sigmoid())
+        """
         if(use_cuda):
            self=self.cuda()
+        """
+        self = self.to(device)
 
     def forward(self, z_what):
-        return self.dec(z_what.cuda())#[B number 400]
+        return self.dec(z_what.to(device))#[B number 400]
 
 
 '''
@@ -69,8 +78,11 @@ class Latent_Predictor_prap(nn.Module):
         super(Latent_Predictor_prap, self).__init__()
         self.pred = nn.Linear(input_size, (output_size*2))
         self._pres = nn.Sigmoid()
+        """
         if(use_cuda):
            self=self.cuda()
+        """
+        self = self.to(device)
 
 
     def forward(self, h,output_size):
@@ -84,8 +96,11 @@ class Latent_Predictor_prap_pres(nn.Module):
         super(Latent_Predictor_prap_pres, self).__init__()
         self.pred = nn.Linear(input_size, 1)
         self._pres = nn.Sigmoid()
+        """
         if(use_cuda):
            self=self.cuda()
+        """
+        self = self.to(device)
 
 
     def forward(self, h):
@@ -99,8 +114,11 @@ class Latent_Predictor_disc_where_and_pres(nn.Module):
         self._pres = nn.Sigmoid()
         self._where_mu = lambda x: x
         self._where_sd = nn.Softplus()
+        """
         if(use_cuda):
            self=self.cuda()
+        """
+        self = self.to(device)
 
     def forward(self, h):
         z_param = self.pred(h)
@@ -116,8 +134,11 @@ class Latent_Predictor_disc_what(nn.Module):
         self.enc = nn.Sequential(nn.Linear(100, 400),
                                  nn.ReLU(),
                                  nn.Linear(400, 100))
+        """
         if(use_cuda):
            self=self.cuda()
+        """
+        self = self.to(device)
 
     def forward(self, data):
         output = self.enc(data)#[B 100]
@@ -138,13 +159,15 @@ def expand_z_where(z_where):
     #             [0,s,y]]
     b = z_where.size(0)
     #n=z_where.size(1)
-    expansion_indices = torch.LongTensor([1, 0, 2, 0, 1, 3])
-    element=torch.zeros([1, 1]).expand(b, 1)
+    expansion_indices = torch.LongTensor([1, 0, 2, 0, 1, 3]).to(device)
+    element=torch.zeros([1, 1]).expand(b, 1).to(device)
+    """
     if(use_cuda):
         expansion_indices = expansion_indices.cuda()
+    """
     #print("z_where.shape_expand",z_where.size())
 
-    out = torch.cat((element.cuda(), z_where), 1)#[B L+1]
+    out = torch.cat((element, z_where), 1)#[B L+1]
     return torch.index_select(out, 1, expansion_indices).view(b,2, 3)
 """
 def expand_z_where_decode(z_where):
@@ -192,7 +215,7 @@ def z_where_inv(z_where):
     # spatial transform performed in the generative model.
     b = z_where.size(0)
     #n=z_where.size(1)
-    out = torch.cat((torch.ones([1, 1]).type_as(z_where).expand(b, 1), -z_where[:, 1:]), 1)
+    out = torch.cat((torch.ones([1, 1]).type_as(z_where).expand(b, 1).to(device), -z_where[:, 1:]), 1)
     out = out / z_where[:,0:1]
     return out#[B where_length]
 
@@ -207,8 +230,7 @@ def attentive_stn_encode(z_where, image):
     b=z_where.size(0)
     theta_inv = expand_z_where(z_where_inv(z_where))
     grid = affine_grid(theta_inv.view(b,2,3), torch.Size((b, 1, 20, 20)))#[b 20 20 2]
-    if(use_cuda):
-        grid=grid.cuda()
+    grid=grid.to(device)
     out = grid_sample(image.view(b, 1, 50, 50), grid)#[b 1 20 20]
     return out.view(b, -1)#[b 400]
 

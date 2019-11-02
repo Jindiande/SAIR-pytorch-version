@@ -33,4 +33,4 @@ def timestep_Multiminst(address1,address2):
     file2 = open(address2, "rb")
     train = pickle.load(file1,encoding='latin1')
     test=pickle.load(file2,encoding='latin1')
-    return np.array((train['imgs'])),np.array((test['imgs'])) #[10 60000 50 50],[10 10000 50 50]
+    return np.array((train['imgs'])),np.array((train['nums'])),np.array((test['imgs'])),np.array((test['nums'])) #[10 60000 50 50],[1,60000,3][10 10000 50 50],[1,10000,3]
